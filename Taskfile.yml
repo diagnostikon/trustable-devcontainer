@@ -8,6 +8,7 @@ vars:
     sh: git tag --sort=-creatordate | head -n 1 || "latest"
 
 tasks:
+  default: task --list-all
 
   show: "echo {{.NAME}}:{{.TAG}}"
 
@@ -18,6 +19,11 @@ tasks:
 
   build:
       - docker build -t "{{.NAME}}:{{.TAG}}" . --load
+      - task: show
+
+  clean:
+      - docker rm -f ssh-devcontainer || true
+      - docker images | awk '/<none>|devcontainer/{print $3}' | xargs docker rmi -f || true
 
   build-and-tag:
     - task: image-tag
