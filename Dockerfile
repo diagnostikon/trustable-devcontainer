@@ -48,6 +48,10 @@ RUN \
     ops -t ;\
     git clone https://github.com/apache/openserverless-devcontainer $HOME/.ops/openserverless-devcontainer ;\
     ln -sf  $HOME/.ops/openserverless-devcontainer/olaris-tk $HOME/.ops/olaris-tk
+RUN \
+    VER=1.0.105 ; [ "$(arch)" = "aarch64" ] && ARCH=arm64 || ARCH=x64 ;\
+    URL=https://github.com/sst/opencode/releases/download/v${VER}/opencode-linux-${ARCH}.tar.gz ;\
+    curl -sL $URL | tar xzvf - -C /home/.local/bin
 
 ADD supervisord.ini /etc/supervisord.ini
 ADD start.sh /usr/local/bin/start.sh
