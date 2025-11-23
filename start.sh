@@ -4,29 +4,28 @@
 mkdir -p /run/sshd
 ssh-keygen -A
 
-export PORT1=${SSH_PORT:-2222}
-export PORT2=${OPENCODE_PORT:-2223}
+# update ops
+export OPS_HOME=/home
+ops -update
 
-# setup user
-export HOME=/home
-if test -n "$USERID"
-then
-    useradd -u "$USERID" -d /home -o -U user -s /bin/bash
-    ops -update
-    git clone https://github.com/apache/openserverless-devcontainer $HOME/.ops/openserverless-devcontainer
-    ln -sf  $HOME/.ops/openserverless-devcontainer/olaris-tk $HOME/.ops/olaris-tk
-
-    if test -n "$SSHKEY"
-    then
-        mkdir -p $HOME/.ssh
-        echo "$SSHKEY" >>$HOME/.ssh/authorized_keys
-        chmod 600 ~/.ssh/authorized_keys
-    fi
-    chown -Rvf "$USERID" /home
+# setup user workspace
+export HOME=/home/workspace
+if test -z "$USERID"
+then USERID=1000
 fi
-cd /workspace
-echo Starting ssh in port $PORT1 and opencode in $PORT2 for user $USERID
-concurrently \
- "sudo /usr/sbin/sshd -p $PORT1 -D" \
- "opencode serve -p $PORT2 --hostname 0.0.0.0"
+/usr/sbin/useradd -u "$USERID" -d $HOME -o -U -s /bin/bash workspace
+
+# add ssh key
+if test -n "$SSHKEY"
+then
+    mkdir -p $HOME/.ssh
+    echo "$SSHKEY" >>$HOME/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+fi
+
+# fix permissions
+chown -Rf "$USERID" /home
+
+# start supervisor
+supervisord -c /etc/supervisord.ini
 

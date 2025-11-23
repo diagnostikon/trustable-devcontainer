@@ -15,7 +15,7 @@ tasks:
   image-tag:
       - git tag -d "$(git tag)" || true
       - git tag "0.1.0-incubating.$(date +%y%m%d%H%M)"
-      - task: show
+      - echo {{.NAME}}:$(git tag --sort=-creatordate | head -n 1)
 
   build:
       - docker build -t "{{.NAME}}:{{.TAG}}" . --load

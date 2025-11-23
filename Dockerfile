@@ -35,18 +35,24 @@ COPY --from=pgloader-builder /build/pgloader/build/bin/pgloader /usr/bin/pgloade
 RUN \
     curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN \
-    npm install -g concurrently opencode-ai
-RUN \
-    curl -sL https://raw.githubusercontent.com/apache/openserverless-cli/refs/heads/main/install.sh | bash \
-    && mv ~/.local/bin/ops /usr/local/bin/ops
+    npm install -g npm
 
-# remove node
 RUN userdel node ; rm -Rvf /home/node
-ENV HOME=/home
+ENV OPS_HOME=/home
 ENV OPS_BRANCH=main
-ADD start.sh /start.sh
+ENV PATH=/home/.local/bin:/usr/local/bin:/usr/bin:/bin
+RUN printf "OPS_HOME=$OPS_HOME\nOPS_BRANCH=$OPS_BRANCH\nPATH=$PATH\n" >/etc/environment
+RUN \
+    export HOME=/home ;\
+    curl -sL https://raw.githubusercontent.com/apache/openserverless-cli/refs/heads/main/install.sh | bash ;\
+    ops -t ;\
+    git clone https://github.com/apache/openserverless-devcontainer $HOME/.ops/openserverless-devcontainer ;\
+    ln -sf  $HOME/.ops/openserverless-devcontainer/olaris-tk $HOME/.ops/olaris-tk
 
+ADD supervisord.ini /etc/supervisord.ini
+ADD start.sh /usr/local/bin/start.sh
+
+RUN mkdir /home/workspace
+WORKDIR /home/workspace
 ENTRYPOINT ["tini", "--"]
-CMD ["/start.sh"]
-RUN mkdir /workspace
-WORKDIR /workspace
+CMD ["/usr/local/bin/start.sh"]
