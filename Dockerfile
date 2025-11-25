@@ -53,6 +53,11 @@ RUN \
     URL=https://github.com/sst/opencode/releases/download/v${VER}/opencode-linux-${ARCH}.tar.gz ;\
     curl -sL $URL | tar xzvf - -C /home/.local/bin
 
+RUN \
+    VER=1.0.105 ; [ "$(arch)" = "aarch64" ] && ARCH=arm64 || ARCH=x64 ;\
+    URL=https://github.com/sst/opencode/releases/download/v${VER}/opencode-linux-${ARCH}.tar.gz ;\
+    curl -sL $URL | tar xzvf - -C /home/.local/bin
+
 ADD supervisord.ini /etc/supervisord.ini
 ADD start.sh /usr/local/bin/start.sh
 

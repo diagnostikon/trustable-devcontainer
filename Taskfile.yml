@@ -2,7 +2,7 @@ version: 3
 
 vars:
 
-  NAME: ghcr.io/sciabarracom/openserverless-devcontainer
+  NAME: ghcr.io/nuvolaris/trustable-devcontainer
 
   TAG:
     sh: git tag --sort=-creatordate | head -n 1 || "latest"
