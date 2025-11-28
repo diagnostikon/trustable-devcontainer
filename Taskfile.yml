@@ -26,6 +26,7 @@ tasks:
       - echo {{.NAME}}:$(git tag --sort=-creatordate | head -n 1)
 
   build:
+      - test -d workspace || die "please git clone git@github.com:nuvolaris/trustable-workspace workspace"
       - docker build -t "{{.NAME}}:{{.TAG}}" . --load
       - task: show
 
