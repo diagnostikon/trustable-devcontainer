@@ -1,0 +1,1 @@
+eval $(awk -F= "{print export \$1 \"='\" \$2 \"'\"}" /etc/environment)

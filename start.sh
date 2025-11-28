@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#setup sshd
+# setup sshd keys
 mkdir -p /run/sshd
 ssh-keygen -A
 
@@ -9,11 +9,12 @@ export HOME=/home
 export OPS_HOME=/home
 ops -update
 
+
 # setup user workspace
 if test -z "$USERID"
 then USERID=1000
 fi
-/usr/sbin/useradd -u "$USERID" -d $HOME -o -U -s /bin/bash devel
+/usr/sbin/useradd -u "$USERID" -d $HOME -o -U -s /bin/bash devel 2>/dev/null
 
 # add ssh key
 if test -n "$SSHKEY"
@@ -27,9 +28,13 @@ then
     chmod 700 $HOME/.ssh
 fi
 
+# intialize
+cd /home/workspace
+printf "OPS_APIHOST=http://miniops.me\nOPS_USER=devel\nOPS_PASSWORD=$OPS_PASSWORD\n" >".env"
+
 # fix permissions
 chmod 0755 $HOME
 chown -Rf "$USERID" /home
 
 # start supervisor
-supervisord -c /etc/supervisord.ini
+exec supervisord -c /etc/supervisord.ini

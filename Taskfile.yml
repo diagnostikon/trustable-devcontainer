@@ -3,6 +3,7 @@ version: 3
 vars:
 
   NAME: ghcr.io/nuvolaris/trustable-devcontainer
+  OPSROOT: ../olaris-tr/opsroot.json
 
   TAG:
     sh: git tag --sort=-creatordate | head -n 1 || "latest"
@@ -12,12 +13,12 @@ tasks:
 
   show: "echo {{.NAME}}:{{.TAG}}"
 
-  update:
+  update-json:
     silent: true
     cmds:
-    - jq . ../olaris/opsroot.json >_opsroot.orig
-    - jq '.config.images.devcontainer = "{{.NAME}}:{{.TAG}}"' ../olaris/opsroot.json >_opsroot.json
-    - diff _opsroot.orig _opsroot.json || cp -v _opsroot.json ../olaris/opsroot.json
+    - jq . {{.OPSROOT}} >_opsroot.orig
+    - jq '.config.images.trustable = "{{.NAME}}:{{.TAG}}"' {{.OPSROOT}} >_opsroot.json
+    - diff _opsroot.orig _opsroot.json || cp -v _opsroot.json {{.OPSROOT}}
 
   image-tag:
       - git tag -d "$(git tag)" || true
