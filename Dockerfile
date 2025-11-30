@@ -30,6 +30,17 @@ RUN \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen en_US.UTF-8 && \
     update-locale LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8 LC_ALL=en_US.UTF-8
+RUN userdel node ; rm -Rvf /home/node
+
+
+# env vars
+ENV OPS_HOME=/home
+ENV OPS_REPO=https://github.com/nuvolaris/bestia
+ENV OPS_BRANCH=devel
+ENV PATH=/home/.local/bin:/home/.bun/bin:/usr/local/bin:/usr/bin:/bin
+ENV HOME=/home
+RUN printf "OPS_HOME=$OPS_HOME\nOPS_BRANCH=$OPS_BRANCH\nPATH=$PATH\nOPS_REPO=https://github.com/nuvolaris/bestia\n" >/etc/environment
+RUN printf "export OPS_HOME=$OPS_HOME\nexport OPS_BRANCH=$OPS_BRANCH\nexport PATH=$PATH\nexport OPS_REPO=https://github.com/nuvolaris/bestia\n" >>/etc/profile
 
 # pgloader, uv, bun, opencode
 COPY --from=pgloader-builder /build/pgloader/build/bin/pgloader /usr/bin/pgloader
@@ -39,20 +50,11 @@ RUN \
     npm install -g npm
 RUN \
     curl -fsSL https://bun.com/install | bash ;\
-    mv -v ~/.bun/bin/bun ~/.local/bin ; rm -Rvf ~/.bun
+    mv -v ~/.bun/bin/bun ~/.local/bin ; rm ~/.bun/bin/bunx ; rm -Rvf ~/.bun ; ln -sf ~/.local/bin/bun ~/.local/bin/bunx
 RUN \
     VER=1.0.105 ; [ "$(arch)" = "aarch64" ] && ARCH=arm64 || ARCH=x64 ;\
     URL=https://github.com/sst/opencode/releases/download/v${VER}/opencode-linux-${ARCH}.tar.gz ;\
     mkdir -p /home/.opencode/bin /home/.config/opencode && curl -sL $URL | tar xzvf - -C /home/.opencode/bin
-
-RUN userdel node ; rm -Rvf /home/node
-ENV HOME=/home
-ENV OPS_HOME=/home
-ENV OPS_BRANCH=main
-ENV OPS_REPO=https://github.com/nuvolaris/bestia
-ENV PATH=/home/.opencode/bin:/home/.local/bin:/home/.bun/bin:/usr/local/bin:/usr/bin:/bin
-RUN printf "OPS_HOME=$OPS_HOME\nOPS_BRANCH=$OPS_BRANCH\nPATH=$PATH\nOPS_REPO=https://github.com/nuvolaris/bestia\n" >/etc/environment
-RUN printf "export OPS_HOME=$OPS_HOME\nexport OPS_BRANCH=$OPS_BRANCH\nexport PATH=$PATH\nexport OPS_REPO=https://github.com/nuvolaris/bestia\n" >>/etc/profile
 
 RUN \
     curl -sL https://raw.githubusercontent.com/apache/openserverless-cli/refs/heads/main/install.sh | bash ;\
@@ -60,13 +62,14 @@ RUN \
     git clone https://github.com/apache/openserverless-devcontainer $HOME/.ops/openserverless-devcontainer ;\
     ln -sf  $HOME/.ops/openserverless-devcontainer/olaris-tk $HOME/.ops/olaris-tk
 
-ADD start.sh /usr/local/bin/start.sh
-ADD opsdevel.sh /usr/local/bin/opsdevel.sh
-ADD supervisord.ini /etc/supervisord.ini
+ADD start.sh /home/start.sh
+ADD opsdevel.sh /home/opsdevel.sh
+ADD opencode.sh /home/opencode.sh
+ADD supervisord.ini /home/supervisord.ini
+ADD opencode.json /home/.config/opencode/opencode.json
 
 ADD workspace /home/workspace
-ADD opencode.json /home/.config/opencode/opencode.json
 WORKDIR /home/workspace
 RUN npm install
 ENTRYPOINT ["tini", "--"]
-CMD ["/usr/local/bin/start.sh"]
+CMD ["/home/start.sh"]

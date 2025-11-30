@@ -1,17 +1,22 @@
 version: 3
 
 vars:
-
   NAME: ghcr.io/nuvolaris/trustable-devcontainer
   OPSROOT: ../olaris-tr/opsroot.json
-
   TAG:
     sh: git tag --sort=-creatordate | head -n 1 || "latest"
+  UID:
+    sh: 'echo {{ if eq OS "windows" }}1000{{ else }}$(id -u){{ end }}'
+  GID:
+    sh: 'echo {{ if eq OS "windows" }}1000{{ else }}$(id -g){{ end }}'
+  DRY: ""
+  EXTRA: ""
+
 
 tasks:
-  default: task --list-all
-
-  show: "echo {{.NAME}}:{{.TAG}}"
+  default:
+    - echo "Image {{.NAME}}:{{.TAG}}"
+    - task --list-all
 
   update-json:
     silent: true
@@ -26,14 +31,64 @@ tasks:
       - echo {{.NAME}}:$(git tag --sort=-creatordate | head -n 1)
 
   build:
-      - test -d workspace || die "please git clone git@github.com:nuvolaris/trustable-workspace workspace"
+      - test -d workspace || git clone git@github.com:nuvolaris/trustable-workspace workspace
+      - cd workspace && git pull origin main --rebase
       - docker build -t "{{.NAME}}:{{.TAG}}" . --load
-      - task: show
 
   clean:
-      - docker rm -f ssh-devcontainer || true
+      - docker rm -f trustable || true
       - docker images | awk '/<none>|devcontainer/{print $3}' | xargs docker rmi -f || true
+      - docker builder prune
 
   build-and-tag:
     - task: image-tag
     - task: build
+
+  run:
+    desc: run trustable
+    requires: {vars: [EXTRA]}
+    silent: false
+    vars:
+      HDI:
+        sh: docker run --rm alpine getent hosts host.docker.internal | awk '{print $1}'
+    cmds:
+      - test -e ~/.ssh/id_rsa.pub || die "please generate an ssh key with 'ssk-keygen -t rsa'"
+      - docker rm -f trustable 2>/dev/null || true
+      - >
+        {{.DRY}} docker run --rm
+        --name trustable
+        --hostname trustable
+        --add-host miniops.me:{{.HDI}}
+        --add-host devel.miniops.me:{{.HDI}}
+        --add-host s3.miniops.me:{{.HDI}}
+        -e OPS_PASSWORD="$(cat ~/.ops/devel.password)"
+        -e SSHKEY="$(cat ~/.ssh/id_rsa.pub)"
+        -e USERID={{.UID}}
+        -p 2223:2222
+        -p 4096:4096
+        -p 5173:5173
+        -p 8080:8080
+        {{.EXTRA}}
+        "{{.NAME}}:{{.TAG}}"
+
+  dev:
+    desc: dev mode
+    vars:
+       PARENT:
+         sh: dirname $PWD
+    cmds:
+    - task: run
+      vars:
+        PARENT:
+        EXTRA: "--mount 'type=bind,src={{.PARENT}}/opencode,dst=/home/opencode'"
+
+  shell:
+    desc: shell mode
+    vars:
+       PARENT:
+         sh: dirname $PWD
+    cmds:
+    - task: run
+      vars:
+        EXTRA: "--mount 'type=bind,src={{.PARENT}}/opencode,dst=/home/opencode' --entrypoint=/bin/bash -ti"
+

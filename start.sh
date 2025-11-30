@@ -30,11 +30,12 @@ fi
 
 # intialize
 cd /home/workspace
-printf "OPS_APIHOST=http://miniops.me\nOPS_USER=devel\nOPS_PASSWORD=$OPS_PASSWORD\n" >".env"
+# add env vars to allow ops ide login and vite proxy
+printf "OPS_APIHOST=http://miniops.me\nOPS_USER=devel\nOPS_PASSWORD=$OPS_PASSWORD\nOPS_HOST=http://devel.miniops.me\n" >".env"
 
 # fix permissions
 chmod 0755 $HOME
 chown -Rf "$USERID" /home
 
 # start supervisor
-exec supervisord -c /etc/supervisord.ini
+exec supervisord -c /home/supervisord.ini
