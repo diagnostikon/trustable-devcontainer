@@ -1,4 +1,0 @@
-[submodule "app"]
-	path = app
-	url = git@github.com:nuvolaris/trustable-app
-        branch = main
