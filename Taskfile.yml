@@ -32,7 +32,9 @@ tasks:
 
   build:
       - test -d workspace || git clone git@github.com:nuvolaris/trustable-workspace workspace
+      - test -d app || git clone git@github.com:nuvolaris/trustable-app app
       - cd workspace && git pull origin main --rebase
+      - cd app && git pull origin main --rebase
       - docker build -t "{{.NAME}}:{{.TAG}}" . --load
 
   clean:
