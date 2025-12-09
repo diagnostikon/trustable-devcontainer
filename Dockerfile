@@ -8,7 +8,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-dev libssl-dev gawk freetds-dev jq \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone pgloader and build it
+# build opencode
+WORKDIR /
+RUN curl -fsSL https://bun.com/install |  bash -s -- bun-v1.3.3
+ENV PATH=/root/.bun/bin:/bin:/usr/bin
+RUN \
+   git clone https://github.com/sst/opencode && \
+   cd /opencode && bun install && ./packages/opencode/script/build.ts --single && \
+   mv -v ./packages/opencode/dist/opencode-linux-$(dpkg --print-architecture)/bin/opencode /usr/bin/opencode
+
+# build pgloader
 WORKDIR /build
 RUN git clone https://github.com/dimitri/pgloader.git \
     && cd pgloader \
@@ -32,35 +41,30 @@ RUN \
     update-locale LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8 LC_ALL=en_US.UTF-8
 RUN userdel node ; rm -Rvf /home/node
 
-
 # env vars
 ENV OPS_HOME=/home
 ENV OPS_REPO=https://github.com/nuvolaris/bestia
-ENV OPS_BRANCH=devel
-ENV PATH=/home/.local/bin:/home/.bun/bin:/usr/local/bin:/usr/bin:/bin
+ENV OPS_BRANCH=bestia
+ENV PATH=/home/.opencode/bin:/home/.local/bin:/home/.bun/bin:/usr/local/bin:/usr/bin:/bin
 ENV HOME=/home
 RUN printf "OPS_HOME=$OPS_HOME\nOPS_BRANCH=$OPS_BRANCH\nPATH=$PATH\nOPS_REPO=https://github.com/nuvolaris/bestia\n" >/etc/environment
 RUN printf "export OPS_HOME=$OPS_HOME\nexport OPS_BRANCH=$OPS_BRANCH\nexport PATH=$PATH\nexport OPS_REPO=https://github.com/nuvolaris/bestia\n" >>/etc/profile
 
 # pgloader, uv, bun, opencode
 COPY --from=pgloader-builder /build/pgloader/build/bin/pgloader /usr/bin/pgloader
+COPY --from=pgloader-builder /usr/bin/opencode /usr/bin/opencode
+COPY --from=pgloader-builder /root/.bun/bin/bun /usr/bin/bun
+
 RUN \
     curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN \
     npm install -g npm
 RUN \
-    curl -fsSL https://bun.com/install | bash ;\
-    mv -v ~/.bun/bin/bun ~/.local/bin ; rm ~/.bun/bin/bunx ; rm -Rvf ~/.bun ; ln -sf ~/.local/bin/bun ~/.local/bin/bunx
-RUN \
-    VER=1.0.105 ; [ "$(arch)" = "aarch64" ] && ARCH=arm64 || ARCH=x64 ;\
-    URL=https://github.com/sst/opencode/releases/download/v${VER}/opencode-linux-${ARCH}.tar.gz ;\
-    mkdir -p /home/.opencode/bin /home/.config/opencode && curl -sL $URL | tar xzvf - -C /home/.opencode/bin
-
-RUN \
     curl -sL https://raw.githubusercontent.com/apache/openserverless-cli/refs/heads/main/install.sh | bash ;\
     ops -t ;\
     git clone https://github.com/apache/openserverless-devcontainer $HOME/.ops/openserverless-devcontainer ;\
     ln -sf  $HOME/.ops/openserverless-devcontainer/olaris-tk $HOME/.ops/olaris-tk
+
 
 ADD start.sh /home/start.sh
 ADD opsdevel.sh /home/opsdevel.sh
@@ -69,6 +73,7 @@ ADD supervisord.ini /home/supervisord.ini
 ADD opencode.json /home/.config/opencode/opencode.json
 
 ADD workspace /home/workspace
+ADD app /home/app
 WORKDIR /home/workspace
 RUN npm install
 ENTRYPOINT ["tini", "--"]
