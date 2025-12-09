@@ -29,6 +29,8 @@ then
 fi
 
 # intialize
+cd /home/app
+uv sync
 cd /home/workspace
 # add env vars to allow ops ide login and vite proxy
 printf "OPS_APIHOST=http://miniops.me\nOPS_USER=devel\nOPS_PASSWORD=$OPS_PASSWORD\nOPS_HOST=http://devel.miniops.me\n" >".env"
